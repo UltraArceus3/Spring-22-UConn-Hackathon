@@ -69,7 +69,7 @@ class CSVStream:
         if self.type != 'select':
             raise RuntimeError('must be a select CSV stream')
         if self._stream is None:
-            raise RuntimError('event stream was never initialized')
+            raise RuntimeError('event stream was never initialized')
         
         tail: str | None = None
         for event in self._stream:
