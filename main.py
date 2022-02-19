@@ -6,6 +6,9 @@ from os import getenv
 from s3_helper import CSVStream
 from typing import Any
 
+from datetime import datetime
+from statsmodels.tsa.arima.model import ARIMA
+
 load_dotenv()
 
 BUY = "buy"
@@ -49,6 +52,12 @@ class Trade:
     base: str
     volume: Decimal
 
+def train(data, current):
+    model = ARIMA(data, order=(1, 1, 2))
+    model_fit = model.fit()
+    predict = model_fit.predict(len(data), len(data))
+    return predict
+
 def algorithm(csv_row: str, context: dict[str, Any],):
     """ Trading Algorithm
 
@@ -68,16 +77,38 @@ def algorithm(csv_row: str, context: dict[str, Any],):
     Yield (None | Trade | [Trade]): a trade order/s; None indicates no trade action
     """
     # algorithm logic...
-
-    response = yield None # example: Trade(BUY, 'xbt', Decimal(1))
+    
+    row = csv_row.split(',')
+    if len(row) != 4:
+        pass
+    exc = row[0].split("-")[2]
+    if context[exc]:
+        val = context[exc]
+        val.append(row[1])
+        context[exc] = val
+    else:
+        context[exc] = []
+    mode = "NEUTRAL"
+    currency = exc
+    x = context[exc]
+    if len(x) < 100:
+        mode = "NEUTRAL"
+    else:
+        result = train(np.array(context[exc]),row[1])
+        if result[0] < float(row(1)):
+            mode = "BUY"
+        else:
+            mode = "SELL"
+    response = yield Trade(BUY, 'xbt', Decimal(1))
 
     # algorithm clean-up/error handling...
 
 if __name__ == '__main__':
     # example to stream data
+    context = {'xbt': [], 'eth': []}
     for row in STREAM.iter_records():
-        print(row)
-
+        algorithm(row,context)
+    
 # Example Interaction
 #
 # Given the following incoming trades, each line represents one csv row:
